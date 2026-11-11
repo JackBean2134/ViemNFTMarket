@@ -9,11 +9,7 @@ import "./MyERC20WithTransferAndCall.sol";
 contract NFTMarket is ERC721Holder, ReentrancyGuard {
     // ============ 新增事件 ============
     event NFTListed(
-        uint256 indexed listingId,
-        address indexed seller,
-        address indexed nftContract,
-        uint256 tokenId,
-        uint256 price
+        uint256 indexed listingId, address indexed seller, address indexed nftContract, uint256 tokenId, uint256 price
     );
 
     event NFTSold(
@@ -41,27 +37,18 @@ contract NFTMarket is ERC721Holder, ReentrancyGuard {
         paymentToken = MyERC20WithTransferAndCall(_paymentToken);
     }
 
-    function list(
-        address nftContract,
-        uint256 tokenId,
-        uint256 price
-    ) external nonReentrant returns (uint256 listingId) {
+    function list(address nftContract, uint256 tokenId, uint256 price)
+        external
+        nonReentrant
+        returns (uint256 listingId)
+    {
         IERC721 nft = IERC721(nftContract);
         require(nft.ownerOf(tokenId) == msg.sender, "not nft owner");
-        require(
-            nft.isApprovedForAll(msg.sender, address(this)),
-            "market not approved"
-        );
+        require(nft.isApprovedForAll(msg.sender, address(this)), "market not approved");
 
         listingId = listings.length;
         listings.push(
-            Listing({
-                seller: msg.sender,
-                nftContract: nftContract,
-                tokenId: tokenId,
-                price: price,
-                active: true
-            })
+            Listing({seller: msg.sender, nftContract: nftContract, tokenId: tokenId, price: price, active: true})
         );
 
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
@@ -81,11 +68,7 @@ contract NFTMarket is ERC721Holder, ReentrancyGuard {
     }
 
     // ERC20 transferAndCall 回调入口
-    function tokensReceived(
-        address from,
-        uint256 amount,
-        bytes calldata data
-    ) external {
+    function tokensReceived(address from, uint256 amount, bytes calldata data) external {
         require(msg.sender == address(paymentToken), "only payment token");
         uint256 listingId = abi.decode(data, (uint256));
 
@@ -97,18 +80,9 @@ contract NFTMarket is ERC721Holder, ReentrancyGuard {
         _dealNFT(listing, from, listingId, true);
     }
 
-    function _dealNFT(
-        Listing storage listing,
-        address buyer,
-        uint256 listingId,
-        bool isViaCallback
-    ) internal {
+    function _dealNFT(Listing storage listing, address buyer, uint256 listingId, bool isViaCallback) internal {
         listing.active = false;
-        IERC721(listing.nftContract).safeTransferFrom(
-            address(this),
-            buyer,
-            listing.tokenId
-        );
+        IERC721(listing.nftContract).safeTransferFrom(address(this), buyer, listing.tokenId);
 
         // 成交事件
         emit NFTSold({
